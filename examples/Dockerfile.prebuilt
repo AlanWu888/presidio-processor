@@ -1,0 +1,6 @@
+# Packages a collector binary built on the host (see examples/build-local.sh).
+# No network access happens during this build, so no extra certificates are
+# needed inside the container.
+FROM gcr.io/distroless/static-debian12
+COPY _build/otelcol-presidio /otelcol-presidio
+ENTRYPOINT ["/otelcol-presidio"]

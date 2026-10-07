@@ -93,6 +93,16 @@ docker build -t otelcol-presidio -f examples/Dockerfile .
 cd examples && LANGFUSE_HOST=... LANGFUSE_AUTH=... docker compose up
 ```
 
+Behind a TLS-inspecting corporate proxy, the Docker build can fail with
+`x509: certificate signed by unknown authority`. Either add your root CA to
+`examples/certs/` (see the Dockerfile), or build on the host, which already
+trusts it, and only package the binary in Docker:
+
+```bash
+./examples/build-local.sh                 # builds for Docker Desktop's architecture
+ARCH=amd64 ./examples/build-local.sh      # e.g. for an amd64 cluster
+```
+
 Before building, change the module path `github.com/your-org/presidioprocessor`
 in `go.mod`, the imports, and `examples/builder-config.yaml` to your repository.
 
