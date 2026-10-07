@@ -1,0 +1,57 @@
+# PoC pipeline: cheap regex masking for every attribute, then Presidio for
+# names, addresses and other context-dependent entities in content attributes.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 20
+
+  # Batch before Presidio so each analyzer call carries many spans.
+  # The batch processor only holds data in memory, never on disk.
+  batch:
+    send_batch_size: 512
+    timeout: 2s
+
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      - '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'   # email
+      - '\b(?:\d[ -]?){13,16}\b'                          # card-like numbers
+    summary: info
+
+  presidio:
+    analyzer:
+      endpoint: http://presidio-analyzer:3000
+      timeout: 5s
+      language: en
+      score_threshold: 0.5
+      # entities: [PERSON, LOCATION, PHONE_NUMBER, UK_NHS, IBAN_CODE]
+      # allow_list: [Acme Ltd]
+    # attributes: defaults cover GenAI semconv, OpenLLMetry, Langfuse and
+    # OpenInference keys. Override with the inventory from your own traces.
+    operator: replace          # or "hash" with hash_key: ${env:PRESIDIO_HASH_KEY}
+    on_error: drop             # drop | reject | passthrough
+
+exporters:
+  otlphttp/langfuse:
+    endpoint: ${env:LANGFUSE_HOST}/api/public/otel
+    headers:
+      # base64 of "<public_key>:<secret_key>" for the PoC Langfuse project
+      Authorization: Basic ${env:LANGFUSE_AUTH}
+  debug:
+    verbosity: detailed        # dev only: prints span content to the console
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, redaction, presidio]
+      exporters: [otlphttp/langfuse]

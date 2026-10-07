@@ -1,0 +1,23 @@
+# Local PoC stack. Build the collector image first:
+#   docker build -t otelcol-presidio -f examples/Dockerfile .
+services:
+  presidio-analyzer:
+    # Pin a release tag from https://github.com/orgs/data-privacy-stack/packages
+    image: ghcr.io/data-privacy-stack/presidio-analyzer:latest
+    # Not published to the host: only the collector talks to it.
+    expose:
+      - "3000"
+
+  otelcol:
+    image: otelcol-presidio
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    volumes:
+      - ./collector-config.yaml:/etc/otelcol/config.yaml:ro
+    environment:
+      LANGFUSE_HOST: ${LANGFUSE_HOST}
+      LANGFUSE_AUTH: ${LANGFUSE_AUTH}
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - presidio-analyzer

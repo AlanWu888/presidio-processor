@@ -1,0 +1,14 @@
+presidio:
+  analyzer:
+    endpoint: http://presidio-analyzer:3000
+    timeout: 3s
+    language: en
+    score_threshold: 0.6
+    entities: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER]
+    allow_list: [Acme Ltd]
+  attributes:
+    - gen_ai.input.messages
+    - llm.input_messages.*
+  operator: hash
+  hash_key: test-key
+  on_error: reject

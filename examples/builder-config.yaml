@@ -1,0 +1,35 @@
+# OCB manifest. Run from the repository root:
+#   go install go.opentelemetry.io/collector/cmd/builder@v0.161.0
+#   builder --config examples/builder-config.yaml
+# Keep every component on the same collector release as the builder.
+dist:
+  name: otelcol-presidio
+  description: OpenTelemetry Collector with Presidio PII redaction (PoC)
+  output_path: ./_build
+
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.161.0
+
+processors:
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.161.0
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.161.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/redactionprocessor v0.161.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.161.0
+  - gomod: github.com/your-org/presidioprocessor v0.0.0
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.161.0
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.161.0
+
+connectors:
+  # For routing already-redacted LiteLLM traffic around the Presidio step.
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector v0.161.0
+
+providers:
+  - gomod: go.opentelemetry.io/collector/confmap/provider/envprovider v1.67.0
+  - gomod: go.opentelemetry.io/collector/confmap/provider/fileprovider v1.67.0
+
+# Build the processor from this checkout. The path is relative to the
+# generated go.mod in ./_build.
+replaces:
+  - github.com/your-org/presidioprocessor => ../
